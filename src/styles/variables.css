@@ -1,0 +1,88 @@
+/* BuildKart / BuildIt Design System Tokens — Eye-Comfort & Ultra-Smooth Palette */
+:root {
+  /* Brand Red Palette — Harmonious & Eye-Friendly */
+  --color-primary: #DC2626;
+  --color-primary-hover: #B91C1C;
+  --color-primary-light: #EF4444;
+  --color-primary-dark: #991B1B;
+  --color-primary-faded: #FEF2F2;
+  --color-primary-glow: rgba(220, 38, 38, 0.16);
+
+  /* Neutrals & Warm Ergonomic Surfaces */
+  --color-bg: #F8F9FA;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F8FAFC;
+  --color-surface-elevated: #FFFFFF;
+  --color-surface-soft: #F1F5F9;
+  
+  --color-dark-bg: #0F172A;
+  --color-dark-surface: #1E293B;
+  --color-dark-card: #243044;
+  --color-dark-border: #334155;
+
+  /* Typography Colors — Soothing High-Legibility */
+  --color-text-main: #0F172A;
+  --color-text-secondary: #475569;
+  --color-text-muted: #64748B;
+  --color-text-inverse: #FFFFFF;
+
+  /* Borders & Subtle Dividers */
+  --color-border: #E2E8F0;
+  --color-border-light: #F1F5F9;
+  --color-border-strong: #CBD5E1;
+
+  /* Semantic Feedback — Soft & Pleasant */
+  --color-success: #15803D;
+  --color-success-bg: #F0FDF4;
+  --color-success-border: #DCFCE7;
+  --color-warning: #B45309;
+  --color-warning-bg: #FFFBEB;
+  --color-warning-border: #FEF3C7;
+  --color-error: #DC2626;
+  --color-error-bg: #FEF2F2;
+  --color-error-border: #FEE2E2;
+  --color-info: #1D4ED8;
+  --color-info-bg: #EFF6FF;
+  --color-info-border: #DBEAFE;
+
+  /* Role Identifiers */
+  --role-customer: #DC2626;
+  --role-retailer: #0F172A;
+  --role-driver: #2563EB;
+  --role-admin: #7C3AED;
+
+  /* Spacing */
+  --space-xxs: 2px;
+  --space-xs: 4px;
+  --space-sm: 8px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* Border Radii */
+  --radius-xs: 6px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 18px;
+  --radius-xl: 24px;
+  --radius-full: 9999px;
+
+  /* Gentle, Diffused Eye-Comfort Shadows */
+  --shadow-xs: 0 1px 2px rgba(15, 23, 42, 0.04);
+  --shadow-sm: 0 1px 3px rgba(15, 23, 42, 0.05), 0 2px 4px rgba(15, 23, 42, 0.02);
+  --shadow-md: 0 4px 10px -2px rgba(15, 23, 42, 0.06), 0 2px 4px -1px rgba(15, 23, 42, 0.03);
+  --shadow-lg: 0 10px 20px -3px rgba(15, 23, 42, 0.08), 0 4px 8px -2px rgba(15, 23, 42, 0.03);
+  --shadow-xl: 0 20px 30px -6px rgba(15, 23, 42, 0.09), 0 8px 12px -4px rgba(15, 23, 42, 0.03);
+  --shadow-glow: 0 0 24px rgba(220, 38, 38, 0.18);
+
+  /* Silky Hardware-Accelerated Transitions */
+  --transition-fast: 180ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-base: 280ms cubic-bezier(0.16, 1, 0.3, 1);
+  --transition-slow: 400ms cubic-bezier(0.16, 1, 0.3, 1);
+
+  /* Layout */
+  --max-width: 1280px;
+  --navbar-height: 72px;
+}

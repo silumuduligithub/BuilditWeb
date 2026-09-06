@@ -1,0 +1,5 @@
+/* Import Design System Core */
+@import './styles/variables.css';
+@import './styles/animations.css';
+@import './styles/global.css';
+@import './styles/components.css';
