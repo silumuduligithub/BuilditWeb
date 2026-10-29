@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
   Package,
@@ -12,15 +12,70 @@ import {
   Navigation,
   Key,
   Play,
+  Loader2,
+  PackageOpen,
 } from 'lucide-react';
 import { useApp } from '../../store';
-import { OrderStatus } from '../../types';
+import { api } from '../../services/api';
+import { Order, OrderStatus } from '../../types';
 
 export const OrderTrackingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const { orders, updateOrderStatus, showToast } = useApp();
 
-  const order = orders.find((o) => o.id === id) || orders[0];
+  const [liveOrder, setLiveOrder] = useState<Order | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    if (!id) return;
+    const found = orders.find((o) => o.id === id);
+    if (found) {
+      setLiveOrder(found);
+      setIsLoading(false);
+    } else {
+      setIsLoading(true);
+      api.getOrderDetail(id)
+        .then((ord) => {
+          if (ord && ord.id) {
+            setLiveOrder(ord);
+          }
+        })
+        .catch(() => {})
+        .finally(() => {
+          setIsLoading(false);
+        });
+    }
+  }, [id, orders]);
+
+  const order = liveOrder || orders.find((o) => o.id === id) || (orders.length > 0 ? orders[0] : null);
+
+  if (isLoading && !order) {
+    return (
+      <div className="main-content" style={{ padding: '80px 0', textAlign: 'center' }}>
+        <Loader2 size={36} className="animate-spin" style={{ margin: '0 auto 16px' }} />
+        <p>Loading order GPS telemetry...</p>
+      </div>
+    );
+  }
+
+  if (!order) {
+    return (
+      <div className="main-content" style={{ padding: '80px 0', textAlign: 'center' }}>
+        <div className="app-container">
+          <div className="card" style={{ maxWidth: '500px', margin: '0 auto', padding: '40px' }}>
+            <PackageOpen size={48} style={{ margin: '0 auto 16px', color: 'var(--color-text-muted)' }} />
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Order Not Found</h2>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px' }}>
+              We could not find an active or historical order matching ID: {id || 'N/A'}.
+            </p>
+            <Link to="/orders" className="btn btn-primary btn-full">
+              View All Orders →
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const steps: { key: OrderStatus; label: string; desc: string }[] = [
     { key: 'placed', label: 'Order Placed', desc: 'Order received by marketplace' },

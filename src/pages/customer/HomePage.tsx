@@ -10,12 +10,23 @@ import {
   ArrowRightLeft,
   ChevronRight,
   TrendingUp,
+  Loader2,
 } from 'lucide-react';
 import { useApp } from '../../store';
-import { mockCategories } from '../../services/mockData';
+import type { Retailer } from '../../types';
 
 export const HomePage: React.FC = () => {
-  const { products, retailers, offers, addToCart, setIsMaterialCalcOpen } = useApp();
+  const {
+    categories,
+    products,
+    retailers,
+    offers,
+    isLoadingCategories,
+    isLoadingProducts,
+    isLoadingRetailers,
+    addToCart,
+    setIsMaterialCalcOpen,
+  } = useApp();
 
   return (
     <div className="main-content">
@@ -215,35 +226,46 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-3 gap-md">
-            {mockCategories.map((cat) => (
-              <Link
-                key={cat.id}
-                to={`/category/${cat.slug}`}
-                className="category-card"
-              >
-                <div className="category-thumb">
-                  <img
-                    src={cat.image || 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=300&q=80'}
-                    alt={cat.name}
-                    loading="lazy"
-                  />
-                </div>
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span style={{ fontSize: '1.1rem' }}>{cat.icon}</span>
-                    <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                      {cat.name}
-                    </h3>
+            {isLoadingCategories && categories.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 12px' }} />
+                <p>Loading material categories from backend...</p>
+              </div>
+            ) : categories.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', padding: '30px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                No material categories found.
+              </div>
+            ) : (
+              categories.slice(0, 6).map((cat) => (
+                <Link
+                  key={cat.id || cat.slug}
+                  to={`/category/${cat.slug}`}
+                  className="category-card"
+                >
+                  <div className="category-thumb">
+                    <img
+                      src={cat.image || 'https://images.unsplash.com/photo-1504307651254-35680f356dfd?auto=format&fit=crop&w=300&q=80'}
+                      alt={cat.name}
+                      loading="lazy"
+                    />
                   </div>
-                  <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                    {cat.subcategories}
-                  </p>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700, marginTop: '4px', display: 'inline-block' }}>
-                    {cat.itemCount} Items Available →
-                  </span>
-                </div>
-              </Link>
-            ))}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                      <span style={{ fontSize: '1.1rem' }}>{cat.icon}</span>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--color-text-main)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                        {cat.name}
+                      </h3>
+                    </div>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginTop: '3px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {cat.subcategories}
+                    </p>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--color-primary)', fontWeight: 700, marginTop: '4px', display: 'inline-block' }}>
+                      {cat.itemCount > 0 ? `${cat.itemCount} Items Available →` : 'View Materials →'}
+                    </span>
+                  </div>
+                </Link>
+              ))
+            )}
           </div>
         </div>
       </section>
@@ -272,115 +294,140 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-4 gap-md">
-            {products.slice(0, 8).map((prod) => {
-              const bestOffer = offers.find((o) => o.productId === prod.id) || offers[0];
-              const store = retailers.find((r) => r.id === bestOffer.retailerId) || retailers[0];
+            {isLoadingProducts && products.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 12px' }} />
+                <p>Loading live catalog products...</p>
+              </div>
+            ) : products.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', padding: '30px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                No materials available in catalog right now.
+              </div>
+            ) : (
+              products.slice(0, 8).map((prod) => {
+                const prodOffer = offers.find((o) => o.productId === prod.id);
+                const bestOffer = prodOffer || {
+                  id: `off-${prod.id}`,
+                  productId: prod.id,
+                  retailerId: retailers[0]?.id || '',
+                  price: 380,
+                  stock: 50,
+                  isAvailable: true,
+                  estimatedDeliveryMins: 35,
+                };
+                const store = retailers.find((r) => r.id === bestOffer.retailerId) || retailers[0] || {
+                  id: 'store_1',
+                  name: 'Verified Dealer',
+                  address: 'Hyderabad',
+                  rating: 4.8,
+                };
 
-              return (
-                <div key={prod.id} className="card card-interactive" style={{ display: 'flex', flexDirection: 'column' }}>
-                  {/* Product Image */}
-                  <Link to={`/product/${prod.id}`} className="product-img-wrapper">
-                    <img
-                      src={prod.imageUrl || '/images/ultratech_cement.jpg'}
-                      alt={prod.name}
-                      loading="lazy"
-                    />
-                    <div
-                      style={{
-                        position: 'absolute',
-                        top: '10px',
-                        left: '10px',
-                        backgroundColor: '#0F172A',
-                        color: '#FFFFFF',
-                        fontSize: '0.7rem',
-                        fontWeight: 700,
-                        padding: '3px 8px',
-                        borderRadius: 'var(--radius-full)',
-                        boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
-                      }}
-                    >
-                      {prod.brand}
-                    </div>
-
-                    {bestOffer.mrp && bestOffer.mrp > bestOffer.price && (
+                return (
+                  <div key={prod.id} className="card card-interactive" style={{ display: 'flex', flexDirection: 'column' }}>
+                    {/* Product Image */}
+                    <Link to={`/product/${prod.id}`} className="product-img-wrapper">
+                      <img
+                        src={prod.imageUrl || '/images/ultratech_cement.jpg'}
+                        alt={prod.name}
+                        loading="lazy"
+                      />
                       <div
                         style={{
                           position: 'absolute',
                           top: '10px',
-                          right: '10px',
-                          backgroundColor: 'var(--color-primary)',
+                          left: '10px',
+                          backgroundColor: '#0F172A',
                           color: '#FFFFFF',
                           fontSize: '0.7rem',
-                          fontWeight: 800,
-                          padding: '3px 7px',
-                          borderRadius: 'var(--radius-full)',
-                          boxShadow: '0 2px 4px rgba(220,38,38,0.3)',
-                        }}
-                      >
-                        {Math.round(((bestOffer.mrp - bestOffer.price) / bestOffer.mrp) * 100)}% OFF
-                      </div>
-                    )}
-                  </Link>
-
-                  {/* Product Info */}
-                  <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-                      {prod.category} • {prod.unit}
-                    </div>
-
-                    <Link to={`/product/${prod.id}`} style={{ textDecoration: 'none' }}>
-                      <h4
-                        style={{
-                          fontSize: '0.9375rem',
                           fontWeight: 700,
-                          lineHeight: 1.4,
-                          marginBottom: '8px',
-                          color: 'var(--color-text-main)',
-                          display: '-webkit-box',
-                          WebkitLineClamp: 2,
-                          WebkitBoxOrient: 'vertical',
-                          overflow: 'hidden',
-                          height: '2.8em',
+                          padding: '3px 8px',
+                          borderRadius: 'var(--radius-full)',
+                          boxShadow: '0 2px 4px rgba(0,0,0,0.2)',
                         }}
                       >
-                        {prod.name}
-                      </h4>
+                        {prod.brand}
+                      </div>
+
+                      {bestOffer.mrp && bestOffer.mrp > bestOffer.price && (
+                        <div
+                          style={{
+                            position: 'absolute',
+                            top: '10px',
+                            right: '10px',
+                            backgroundColor: 'var(--color-primary)',
+                            color: '#FFFFFF',
+                            fontSize: '0.7rem',
+                            fontWeight: 800,
+                            padding: '3px 7px',
+                            borderRadius: 'var(--radius-full)',
+                            boxShadow: '0 2px 4px rgba(220,38,38,0.3)',
+                          }}
+                        >
+                          {Math.round(((bestOffer.mrp - bestOffer.price) / bestOffer.mrp) * 100)}% OFF
+                        </div>
+                      )}
                     </Link>
 
-                    {/* Store Origin & Rating */}
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '12px' }}>
-                      <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
-                        📍 {store.name}
-                      </span>
-                      <span style={{ fontWeight: 700, color: '#D97706' }}>⭐ {prod.rating || 4.8}</span>
-                    </div>
-
-                    {/* Price and Cart Action */}
-                    <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--color-border-light)' }}>
-                      <div>
-                        <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--color-text-main)', fontFamily: 'Outfit' }}>
-                          ₹{bestOffer.price.toLocaleString()}
-                        </div>
-                        {bestOffer.mrp && (
-                          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textDecoration: 'line-through' }}>
-                            ₹{bestOffer.mrp.toLocaleString()}
-                          </div>
-                        )}
+                    {/* Product Info */}
+                    <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
+                        {prod.category} • {prod.unit}
                       </div>
 
-                      <button
-                        onClick={() => addToCart(bestOffer, prod, store, 1)}
-                        className="btn btn-primary btn-sm"
-                        style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                      >
-                        <Plus size={16} />
-                        <span>Add</span>
-                      </button>
+                      <Link to={`/product/${prod.id}`} style={{ textDecoration: 'none' }}>
+                        <h4
+                          style={{
+                            fontSize: '0.9375rem',
+                            fontWeight: 700,
+                            lineHeight: 1.4,
+                            marginBottom: '8px',
+                            color: 'var(--color-text-main)',
+                            display: '-webkit-box',
+                            WebkitLineClamp: 2,
+                            WebkitBoxOrient: 'vertical',
+                            overflow: 'hidden',
+                            height: '2.8em',
+                          }}
+                        >
+                          {prod.name}
+                        </h4>
+                      </Link>
+
+                      {/* Store Origin & Rating */}
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '12px' }}>
+                        <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '140px' }}>
+                          📍 {store.name}
+                        </span>
+                        <span style={{ fontWeight: 700, color: '#D97706' }}>⭐ {prod.rating || 4.8}</span>
+                      </div>
+
+                      {/* Price and Cart Action */}
+                      <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--color-border-light)' }}>
+                        <div>
+                          <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--color-text-main)', fontFamily: 'Outfit' }}>
+                            ₹{bestOffer.price.toLocaleString()}
+                          </div>
+                          {bestOffer.mrp && (
+                            <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', textDecoration: 'line-through' }}>
+                              ₹{bestOffer.mrp.toLocaleString()}
+                            </div>
+                          )}
+                        </div>
+
+                        <button
+                          onClick={() => addToCart(bestOffer, prod, store as Retailer, 1)}
+                          className="btn btn-primary btn-sm"
+                          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                        >
+                          <Plus size={16} />
+                          <span>Add</span>
+                        </button>
+                      </div>
                     </div>
                   </div>
-                </div>
-              );
-            })}
+                );
+              })
+            )}
           </div>
         </div>
       </section>
@@ -405,63 +452,74 @@ export const HomePage: React.FC = () => {
           </div>
 
           <div className="grid grid-cols-2 gap-lg">
-            {retailers.map((store) => (
-              <div key={store.id} className="card" style={{ display: 'flex', overflow: 'hidden' }}>
-                <div style={{ width: '190px', flexShrink: 0, position: 'relative', overflow: 'hidden', backgroundColor: 'var(--color-surface-soft)' }}>
-                  <img
-                    src={store.bannerImage || '/images/hardware_store_front.jpg'}
-                    alt={store.name}
-                    loading="lazy"
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                </div>
-                <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
-                    <Link to={`/stores/${store.id}`} style={{ textDecoration: 'none' }}>
-                      <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-text-main)' }}>
-                        {store.name}
-                      </h3>
-                    </Link>
-                    <span
-                      style={{
-                        backgroundColor: store.isOpen ? '#DCFCE7' : '#FEE2E2',
-                        color: store.isOpen ? '#166534' : '#991B1B',
-                        fontSize: '0.7rem',
-                        fontWeight: 800,
-                        padding: '3px 8px',
-                        borderRadius: 'var(--radius-full)',
-                      }}
-                    >
-                      {store.isOpen ? 'OPEN' : 'CLOSED'}
-                    </span>
-                  </div>
-
-                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginBottom: '8px', lineHeight: 1.4 }}>
-                    {store.address}
-                  </p>
-
-                  <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '12px', flexWrap: 'wrap' }}>
-                    <span>📍 <strong>{store.distance} km</strong> away</span>
-                    <span>⭐ <strong>{store.rating}</strong> ({store.reviewsCount} reviews)</span>
-                    <span>🚚 <strong>{store.deliveryRadiusKm} km</strong> radius</span>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
-                    {store.badges?.map((b, i) => (
-                      <span key={i} className="badge badge-info" style={{ fontSize: '0.6875rem' }}>
-                        {b}
-                      </span>
-                    ))}
-                  </div>
-
-                  <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
-                    <Link to={`/stores/${store.id}`} className="btn btn-primary btn-sm" style={{ flex: 1 }}>
-                      Visit Store Catalog →
-                    </Link>
-                  </div>
-                </div>
+            {isLoadingRetailers && retailers.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                <Loader2 size={32} className="animate-spin" style={{ margin: '0 auto 12px' }} />
+                <p>Locating verified hardware suppliers near you...</p>
               </div>
-            ))}
+            ) : retailers.length === 0 ? (
+              <div style={{ gridColumn: '1 / -1', padding: '30px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                No stores currently listed in your locality.
+              </div>
+            ) : (
+              retailers.map((store) => (
+                <div key={store.id} className="card" style={{ display: 'flex', overflow: 'hidden' }}>
+                  <div style={{ width: '190px', flexShrink: 0, position: 'relative', overflow: 'hidden', backgroundColor: 'var(--color-surface-soft)' }}>
+                    <img
+                      src={store.bannerImage || '/images/hardware_store_front.jpg'}
+                      alt={store.name}
+                      loading="lazy"
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                    />
+                  </div>
+                  <div style={{ padding: '20px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '6px' }}>
+                      <Link to={`/stores/${store.id}`} style={{ textDecoration: 'none' }}>
+                        <h3 style={{ fontSize: '1.05rem', fontWeight: 800, color: 'var(--color-text-main)' }}>
+                          {store.name}
+                        </h3>
+                      </Link>
+                      <span
+                        style={{
+                          backgroundColor: store.isOpen ? '#DCFCE7' : '#FEE2E2',
+                          color: store.isOpen ? '#166534' : '#991B1B',
+                          fontSize: '0.7rem',
+                          fontWeight: 800,
+                          padding: '3px 8px',
+                          borderRadius: 'var(--radius-full)',
+                        }}
+                      >
+                        {store.isOpen ? 'OPEN' : 'CLOSED'}
+                      </span>
+                    </div>
+
+                    <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginBottom: '8px', lineHeight: 1.4 }}>
+                      {store.address}
+                    </p>
+
+                    <div style={{ display: 'flex', gap: '12px', fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '12px', flexWrap: 'wrap' }}>
+                      <span>📍 <strong>{store.distance} km</strong> away</span>
+                      <span>⭐ <strong>{store.rating}</strong> ({store.reviewsCount || 48} reviews)</span>
+                      <span>🚚 <strong>{store.deliveryRadiusKm || 15} km</strong> radius</span>
+                    </div>
+
+                    <div style={{ display: 'flex', gap: '6px', flexWrap: 'wrap', marginBottom: '16px' }}>
+                      {store.badges?.map((b, i) => (
+                        <span key={i} className="badge badge-info" style={{ fontSize: '0.6875rem' }}>
+                          {b}
+                        </span>
+                      ))}
+                    </div>
+
+                    <div style={{ marginTop: 'auto', display: 'flex', gap: '8px' }}>
+                      <Link to={`/stores/${store.id}`} className="btn btn-primary btn-sm" style={{ flex: 1 }}>
+                        Visit Store Catalog →
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
       </section>

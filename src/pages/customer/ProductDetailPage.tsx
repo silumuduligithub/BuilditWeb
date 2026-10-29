@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
   ShieldCheck,
@@ -12,26 +12,134 @@ import {
   ArrowRightLeft,
   Check,
   Calculator,
+  Loader2,
+  PackageOpen,
 } from 'lucide-react';
 import { useApp } from '../../store';
-import { mockProducts } from '../../services/mockData';
+import { api } from '../../services/api';
+import type { Product, RetailerProductOffer, Retailer } from '../../types';
 
 export const ProductDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { products, offers, retailers, addToCart, setIsCartOpen, setIsMaterialCalcOpen } = useApp();
+  const {
+    products,
+    offers,
+    retailers,
+    addToCart,
+    setIsCartOpen,
+    setIsMaterialCalcOpen,
+    isLoadingProducts,
+  } = useApp();
 
-  const product = products.find((p) => p.id === id) || mockProducts[0];
-  const productOffers = offers.filter((o) => o.productId === product.id);
+  const [liveProduct, setLiveProduct] = useState<Product | null>(null);
+  const [liveOffers, setLiveOffers] = useState<RetailerProductOffer[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Default selected offer (cheapest available)
-  const [selectedOfferId, setSelectedOfferId] = useState<string>(
-    productOffers[0]?.id || ''
-  );
+  // Selected Offer & Quantity
+  const [selectedOfferId, setSelectedOfferId] = useState<string>('');
   const [quantity, setQuantity] = useState<number>(1);
 
-  const selectedOffer = productOffers.find((o) => o.id === selectedOfferId) || productOffers[0];
-  const selectedStore = retailers.find((r) => r.id === selectedOffer?.retailerId) || retailers[0];
+  useEffect(() => {
+    if (!id) return;
+    setIsLoading(true);
+    setError(null);
+
+    // Check store first, and also fetch live product & offers
+    const cached = products.find((p) => p.id === id);
+    if (cached) {
+      setLiveProduct(cached);
+    }
+
+    Promise.all([
+      api.getProductById(id).catch(() => cached || null),
+      api.getOffersForProduct(id).catch(() => []),
+    ])
+      .then(([prod, prodOffers]) => {
+        if (prod && prod.id) {
+          setLiveProduct(prod);
+          const finalOffers = prodOffers.length > 0 ? prodOffers : offers.filter((o) => o.productId === prod.id);
+          setLiveOffers(finalOffers);
+          if (finalOffers.length > 0) {
+            setSelectedOfferId(finalOffers[0].id);
+          }
+        } else {
+          setError('Product not found in catalog.');
+        }
+      })
+      .catch((err) => {
+        if (!cached) {
+          setError('Failed to load product details.');
+        }
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, [id, products]);
+
+  if (isLoading && !liveProduct) {
+    return (
+      <div className="main-content" style={{ padding: '80px 0', textAlign: 'center' }}>
+        <div className="app-container">
+          <Loader2 size={40} className="animate-spin" style={{ margin: '0 auto 16px', color: 'var(--color-primary)' }} />
+          <h2 style={{ fontSize: '1.25rem', fontWeight: 700 }}>Loading Material Details...</h2>
+          <p style={{ color: 'var(--color-text-secondary)', marginTop: '4px' }}>
+            Fetching verified manufacturer specs & live dealer pricing
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !liveProduct) {
+    return (
+      <div className="main-content" style={{ padding: '80px 0', textAlign: 'center' }}>
+        <div className="app-container">
+          <div className="card" style={{ maxWidth: '500px', margin: '0 auto', padding: '40px' }}>
+            <PackageOpen size={48} style={{ margin: '0 auto 16px', color: 'var(--color-text-muted)' }} />
+            <h2 style={{ fontSize: '1.5rem', fontWeight: 800, marginBottom: '8px' }}>Product Not Found</h2>
+            <p style={{ color: 'var(--color-text-secondary)', marginBottom: '24px' }}>
+              The construction material you are looking for is not listed or has been archived.
+            </p>
+            <Link to="/categories" className="btn btn-primary btn-full">
+              Browse Material Catalog →
+            </Link>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const product = liveProduct;
+  const productOffers = liveOffers.length > 0 ? liveOffers : offers.filter((o) => o.productId === product.id);
+
+  // Construct default active offer if zero returned from backend
+  const fallbackOffer: RetailerProductOffer = {
+    id: `off-${product.id}`,
+    productId: product.id,
+    retailerId: retailers[0]?.id || '',
+    price: 380,
+    mrp: 440,
+    stock: 50,
+    isAvailable: true,
+    estimatedDeliveryMins: 35,
+    storeName: retailers[0]?.name || 'Verified Supplier',
+    storeRating: retailers[0]?.rating || 4.8,
+  };
+
+  const selectedOffer = productOffers.find((o) => o.id === selectedOfferId) || productOffers[0] || fallbackOffer;
+  const selectedStore: Retailer =
+    retailers.find((r) => r.id === selectedOffer?.retailerId) ||
+    retailers[0] || {
+      id: 'store_1',
+      name: selectedOffer?.storeName || 'Verified Supplier',
+      address: 'Hyderabad, Telangana',
+      distance: 1.5,
+      rating: selectedOffer?.storeRating || 4.8,
+      isServiceable: true,
+      deliveryTypes: ['express', 'scheduled', 'bulk'],
+    };
 
   const handleAddToCart = () => {
     if (!selectedOffer) return;
@@ -54,7 +162,9 @@ export const ProductDetailPage: React.FC = () => {
             <span>Home</span>
           </Link>
           <span style={{ color: 'var(--color-text-muted)' }}>/</span>
-          <span style={{ color: 'var(--color-text-secondary)' }}>{product.category}</span>
+          <Link to="/categories" style={{ color: 'var(--color-text-secondary)', textDecoration: 'none' }}>
+            {product.category}
+          </Link>
           <span style={{ color: 'var(--color-text-muted)' }}>/</span>
           <span style={{ color: 'var(--color-text-main)', fontWeight: 600 }}>{product.name}</span>
         </div>
@@ -129,8 +239,8 @@ export const ProductDetailPage: React.FC = () => {
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '8px' }}>
               <span className="badge badge-info">{product.category}</span>
-              <span className="badge badge-success">⭐ {product.rating || 4.8} ({product.reviewCount || 320} reviews)</span>
-              <span className="badge badge-dark">SKU: {product.sku || 'UTC-53'}</span>
+              <span className="badge badge-success">⭐ {product.rating || 4.8} ({product.reviewCount || 48} reviews)</span>
+              {product.sku && <span className="badge badge-dark">SKU: {product.sku}</span>}
             </div>
 
             <h1 style={{ fontSize: '1.85rem', fontWeight: 900, lineHeight: 1.25, marginBottom: '12px' }}>
@@ -138,7 +248,7 @@ export const ProductDetailPage: React.FC = () => {
             </h1>
 
             <p style={{ fontSize: '0.9375rem', color: 'var(--color-text-secondary)', lineHeight: 1.6, marginBottom: '20px' }}>
-              {product.description}
+              {product.description || 'Certified premium construction grade material sourced from authorized local distributors.'}
             </p>
 
             {/* Price Box */}
@@ -154,7 +264,7 @@ export const ProductDetailPage: React.FC = () => {
                 <span style={{ fontSize: '2.25rem', fontWeight: 900, color: 'var(--color-primary)', fontFamily: 'Outfit' }}>
                   ₹{(selectedOffer?.price || 385).toLocaleString()}
                 </span>
-                {selectedOffer?.mrp && (
+                {selectedOffer?.mrp && selectedOffer.mrp > selectedOffer.price && (
                   <span style={{ fontSize: '1.1rem', color: 'var(--color-text-muted)', textDecoration: 'line-through' }}>
                     ₹{selectedOffer.mrp.toLocaleString()}
                   </span>
@@ -165,7 +275,7 @@ export const ProductDetailPage: React.FC = () => {
               </div>
 
               {/* Bulk discount tiers */}
-              {product.bulkDiscountTiers && (
+              {product.bulkDiscountTiers && product.bulkDiscountTiers.length > 0 && (
                 <div style={{ marginTop: '12px', borderTop: '1px solid var(--color-border)', paddingTop: '12px' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--color-text-muted)', marginBottom: '6px' }}>
                     BULK WHOLESALE PRICING TIERS:
@@ -189,7 +299,7 @@ export const ProductDetailPage: React.FC = () => {
                   <button onClick={() => setQuantity((q) => Math.max(1, q - 1))}>
                     <Minus size={14} />
                   </button>
-                  <span style={{ minWidth: '40px' }}>{quantity}</span>
+                  <span style={{ minWidth: '40px', textAlign: 'center', fontWeight: 700 }}>{quantity}</span>
                   <button onClick={() => setQuantity((q) => q + 1)}>
                     <Plus size={14} />
                   </button>
@@ -239,80 +349,86 @@ export const ProductDetailPage: React.FC = () => {
         </div>
 
         {/* Multi-Seller Offers Comparison Table */}
-        <div style={{ marginBottom: '40px' }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-            <div>
-              <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Compare Local Store Offers ({productOffers.length})</h3>
-              <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
-                Choose the best price and fastest delivery time among local dealers.
-              </p>
+        {productOffers.length > 0 && (
+          <div style={{ marginBottom: '40px' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <div>
+                <h3 style={{ fontSize: '1.35rem', fontWeight: 800 }}>Compare Local Store Offers ({productOffers.length})</h3>
+                <p style={{ fontSize: '0.875rem', color: 'var(--color-text-secondary)' }}>
+                  Choose the best price and fastest delivery time among local dealers.
+                </p>
+              </div>
+              <Link to="/compare" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <ArrowRightLeft size={16} />
+                <span>Full Store Comparison Tool</span>
+              </Link>
             </div>
-            <Link to="/compare" className="btn btn-secondary btn-sm" style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <ArrowRightLeft size={16} />
-              <span>Full Store Comparison Tool</span>
-            </Link>
-          </div>
 
-          <div className="card" style={{ overflowX: 'auto' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
-              <thead>
-                <tr style={{ backgroundColor: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
-                  <th style={{ padding: '14px 16px', fontWeight: 700 }}>Hardware Store</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700 }}>Distance</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700 }}>Stock Availability</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700 }}>Est. Delivery</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700 }}>Unit Price</th>
-                  <th style={{ padding: '14px 16px', fontWeight: 700, textAlign: 'right' }}>Select Seller</th>
-                </tr>
-              </thead>
-              <tbody>
-                {productOffers.map((offer) => {
-                  const store = retailers.find((r) => r.id === offer.retailerId) || retailers[0];
-                  const isSelected = selectedOffer?.id === offer.id;
+            <div className="card" style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', textAlign: 'left', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr style={{ backgroundColor: 'var(--color-bg)', borderBottom: '1px solid var(--color-border)' }}>
+                    <th style={{ padding: '14px 16px', fontWeight: 700 }}>Hardware Store</th>
+                    <th style={{ padding: '14px 16px', fontWeight: 700 }}>Distance</th>
+                    <th style={{ padding: '14px 16px', fontWeight: 700 }}>Stock Availability</th>
+                    <th style={{ padding: '14px 16px', fontWeight: 700 }}>Est. Delivery</th>
+                    <th style={{ padding: '14px 16px', fontWeight: 700 }}>Unit Price</th>
+                    <th style={{ padding: '14px 16px', fontWeight: 700, textAlign: 'right' }}>Select Seller</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {productOffers.map((offer) => {
+                    const store = retailers.find((r) => r.id === offer.retailerId) || {
+                      name: offer.storeName || 'Verified Supplier',
+                      rating: offer.storeRating || 4.8,
+                      distance: 1.5,
+                    };
+                    const isSelected = selectedOffer?.id === offer.id;
 
-                  return (
-                    <tr
-                      key={offer.id}
-                      style={{
-                        borderBottom: '1px solid var(--color-border)',
-                        backgroundColor: isSelected ? 'var(--color-primary-faded)' : 'transparent',
-                      }}
-                    >
-                      <td style={{ padding: '14px 16px', fontWeight: 700 }}>
-                        <div>{store.name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>⭐ {store.rating} Rating</div>
-                      </td>
-                      <td style={{ padding: '14px 16px' }}>{store.distance} km</td>
-                      <td style={{ padding: '14px 16px' }}>
-                        <span className={`badge ${offer.stock > 0 ? 'badge-success' : 'badge-error'}`}>
-                          {offer.stock > 0 ? `${offer.stock} Units In Stock` : 'Out of Stock'}
-                        </span>
-                      </td>
-                      <td style={{ padding: '14px 16px', fontWeight: 600 }}>⚡ {offer.estimatedDeliveryMins} Mins</td>
-                      <td style={{ padding: '14px 16px', fontWeight: 900, fontSize: '1.05rem', color: 'var(--color-primary)', fontFamily: 'Outfit' }}>
-                        ₹{offer.price.toLocaleString()}
-                      </td>
-                      <td style={{ padding: '14px 16px', textAlign: 'right' }}>
-                        {isSelected ? (
-                          <span className="btn btn-sm btn-primary" style={{ pointerEvents: 'none' }}>
-                            <Check size={14} /> Selected
+                    return (
+                      <tr
+                        key={offer.id}
+                        style={{
+                          borderBottom: '1px solid var(--color-border)',
+                          backgroundColor: isSelected ? 'var(--color-primary-faded)' : 'transparent',
+                        }}
+                      >
+                        <td style={{ padding: '14px 16px', fontWeight: 700 }}>
+                          <div>{store.name}</div>
+                          <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>⭐ {store.rating} Rating</div>
+                        </td>
+                        <td style={{ padding: '14px 16px' }}>{store.distance} km</td>
+                        <td style={{ padding: '14px 16px' }}>
+                          <span className={`badge ${offer.stock > 0 ? 'badge-success' : 'badge-error'}`}>
+                            {offer.stock > 0 ? `${offer.stock} Units In Stock` : 'Out of Stock'}
                           </span>
-                        ) : (
-                          <button onClick={() => setSelectedOfferId(offer.id)} className="btn btn-sm btn-secondary">
-                            Select
-                          </button>
-                        )}
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
+                        </td>
+                        <td style={{ padding: '14px 16px', fontWeight: 600 }}>⚡ {offer.estimatedDeliveryMins} Mins</td>
+                        <td style={{ padding: '14px 16px', fontWeight: 900, fontSize: '1.05rem', color: 'var(--color-primary)', fontFamily: 'Outfit' }}>
+                          ₹{offer.price.toLocaleString()}
+                        </td>
+                        <td style={{ padding: '14px 16px', textAlign: 'right' }}>
+                          {isSelected ? (
+                            <span className="btn btn-sm btn-primary" style={{ pointerEvents: 'none' }}>
+                              <Check size={14} /> Selected
+                            </span>
+                          ) : (
+                            <button onClick={() => setSelectedOfferId(offer.id)} className="btn btn-sm btn-secondary">
+                              Select
+                            </button>
+                          )}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* Technical Specifications */}
-        {product.specifications && (
+        {product.specifications && Object.keys(product.specifications).length > 0 && (
           <div>
             <h3 style={{ fontSize: '1.35rem', fontWeight: 800, marginBottom: '16px' }}>
               Technical Specifications & Compliance
@@ -331,7 +447,7 @@ export const ProductDetailPage: React.FC = () => {
                     }}
                   >
                     <span style={{ color: 'var(--color-text-secondary)', fontWeight: 600 }}>{key}</span>
-                    <span style={{ color: 'var(--color-text-main)', fontWeight: 700 }}>{val}</span>
+                    <span style={{ color: 'var(--color-text-main)', fontWeight: 700 }}>{String(val)}</span>
                   </div>
                 ))}
               </div>

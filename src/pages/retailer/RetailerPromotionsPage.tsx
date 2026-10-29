@@ -52,33 +52,46 @@ export const RetailerPromotionsPage: React.FC = () => {
           </button>
         </div>
 
-        <div className="grid grid-cols-3 gap-lg">
-          {promotions.map((promo) => (
-            <div key={promo.id} className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <span className="badge badge-primary">{promo.discountPct}% OFF</span>
-                  <button onClick={() => deletePromotion(promo.id)} style={{ color: 'var(--color-text-muted)' }}>
-                    <Trash2 size={16} />
-                  </button>
-                </div>
-
-                <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '6px' }}>{promo.title}</h3>
-                <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
-                  Target: {promo.productName}
-                </div>
-              </div>
-
-              <div style={{ backgroundColor: 'var(--color-bg)', padding: '12px', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+        {promotions.length === 0 ? (
+          <div className="card" style={{ padding: '60px 24px', textAlign: 'center' }}>
+            <div style={{ fontSize: '3rem', marginBottom: '12px' }}>🏷️</div>
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, marginBottom: '8px' }}>No Active Promotions</h3>
+            <p style={{ color: 'var(--color-text-muted)', marginBottom: '20px' }}>
+              Launch a discount campaign or special coupon code to drive bulk contractor orders.
+            </p>
+            <button onClick={() => setIsCreateModalOpen(true)} className="btn btn-primary">
+              Create First Campaign
+            </button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-lg">
+            {promotions.map((promo) => (
+              <div key={promo.id} className="card" style={{ padding: '24px', display: 'flex', flexDirection: 'column', justifyContent: 'space-between' }}>
                 <div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>COUPON CODE</div>
-                  <div style={{ fontWeight: 900, color: 'var(--color-primary)', fontFamily: 'Outfit' }}>{promo.couponCode}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <span className="badge badge-primary">{promo.discountPct}% OFF</span>
+                    <button onClick={() => deletePromotion(promo.id)} style={{ color: 'var(--color-text-muted)', background: 'none', border: 'none', cursor: 'pointer' }}>
+                      <Trash2 size={16} />
+                    </button>
+                  </div>
+
+                  <h3 style={{ fontSize: '1.15rem', fontWeight: 800, marginBottom: '6px' }}>{promo.title}</h3>
+                  <div style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
+                    Target: {promo.productName}
+                  </div>
                 </div>
-                <span className="badge badge-success">{promo.status.toUpperCase()}</span>
+
+                <div style={{ backgroundColor: 'var(--color-bg)', padding: '12px', borderRadius: 'var(--radius-md)', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                  <div>
+                    <div style={{ fontSize: '0.7rem', color: 'var(--color-text-muted)' }}>COUPON CODE</div>
+                    <div style={{ fontWeight: 900, color: 'var(--color-primary)', fontFamily: 'Outfit' }}>{promo.couponCode}</div>
+                  </div>
+                  <span className="badge badge-success">{promo.status.toUpperCase()}</span>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
 
         {/* Create Promo Modal */}
         {isCreateModalOpen && (

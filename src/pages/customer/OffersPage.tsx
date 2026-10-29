@@ -26,69 +26,79 @@ export const OffersPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-lg">
-          {promotions.map((promo) => (
-            <div
-              key={promo.id}
-              className="card"
-              style={{
-                border: '1.5px dashed var(--color-primary)',
-                backgroundColor: '#FFFFFF',
-                padding: '24px',
-                display: 'flex',
-                flexDirection: 'column',
-                justifyContent: 'space-between',
-              }}
-            >
-              <div>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
-                  <span className="badge badge-primary" style={{ fontSize: '0.875rem' }}>
-                    {promo.discountPct}% FLAT DISCOUNT
-                  </span>
-                  <span className="badge badge-success">{promo.status.toUpperCase()}</span>
-                </div>
-
-                <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '6px' }}>{promo.title}</h3>
-                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
-                  Applicable on: <strong>{promo.productName}</strong>
-                </p>
-
-                <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
-                  <div>• Min Order Value: ₹{promo.minOrderValue?.toLocaleString() || 5000}</div>
-                  <div>• Valid Till: {promo.endDate}</div>
-                </div>
-              </div>
-
+        {promotions.length === 0 ? (
+          <div className="card" style={{ padding: '48px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+            <Percent size={48} style={{ margin: '0 auto 12px', opacity: 0.6, color: 'var(--color-primary)' }} />
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text-main)' }}>No Active Site Coupons Right Now</h3>
+            <p style={{ marginTop: '6px', maxWidth: '460px', margin: '6px auto 0' }}>
+              Special wholesale contractor coupons and tender rebates will appear here as soon as they are published by our supplier network.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-lg">
+            {promotions.map((promo) => (
               <div
+                key={promo.id}
+                className="card"
                 style={{
-                  backgroundColor: 'var(--color-bg)',
-                  border: '1px solid var(--color-border)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '10px 14px',
+                  border: '1.5px dashed var(--color-primary)',
+                  backgroundColor: '#FFFFFF',
+                  padding: '24px',
                   display: 'flex',
-                  alignItems: 'center',
+                  flexDirection: 'column',
                   justifyContent: 'space-between',
                 }}
               >
                 <div>
-                  <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>COUPON CODE</div>
-                  <div style={{ fontSize: '1.1rem', fontWeight: 900, letterSpacing: '1px', color: 'var(--color-primary)', fontFamily: 'Outfit' }}>
-                    {promo.couponCode}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '12px' }}>
+                    <span className="badge badge-primary" style={{ fontSize: '0.875rem' }}>
+                      {promo.discountPct}% FLAT DISCOUNT
+                    </span>
+                    <span className="badge badge-success">{promo.status.toUpperCase()}</span>
+                  </div>
+
+                  <h3 style={{ fontSize: '1.2rem', fontWeight: 800, marginBottom: '6px' }}>{promo.title}</h3>
+                  <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-secondary)', marginBottom: '16px' }}>
+                    Applicable on: <strong>{promo.productName}</strong>
+                  </p>
+
+                  <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '16px' }}>
+                    <div>• Min Order Value: ₹{promo.minOrderValue?.toLocaleString() || 5000}</div>
+                    <div>• Valid Till: {promo.endDate}</div>
                   </div>
                 </div>
 
-                <button
-                  onClick={() => handleCopyCode(promo.couponCode)}
-                  className="btn btn-secondary btn-sm"
-                  style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                <div
+                  style={{
+                    backgroundColor: 'var(--color-bg)',
+                    border: '1px solid var(--color-border)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '10px 14px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                  }}
                 >
-                  <Copy size={14} />
-                  <span>Copy</span>
-                </button>
+                  <div>
+                    <div style={{ fontSize: '0.6875rem', color: 'var(--color-text-muted)', fontWeight: 700 }}>COUPON CODE</div>
+                    <div style={{ fontSize: '1.1rem', fontWeight: 900, letterSpacing: '1px', color: 'var(--color-primary)', fontFamily: 'Outfit' }}>
+                      {promo.couponCode}
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => handleCopyCode(promo.couponCode)}
+                    className="btn btn-secondary btn-sm"
+                    style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                  >
+                    <Copy size={14} />
+                    <span>Copy</span>
+                  </button>
+                </div>
               </div>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );

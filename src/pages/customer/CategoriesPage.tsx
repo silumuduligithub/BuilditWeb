@@ -1,10 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Filter, ArrowUpDown, Plus, Check, Star, Truck, ArrowLeft } from 'lucide-react';
+import { Filter, Plus, ArrowLeft, Loader2, PackageOpen } from 'lucide-react';
 import { useApp } from '../../store';
-import { mockCategories } from '../../services/mockData';
+import { api } from '../../services/api';
+import type { CategoryItem, Product, Retailer } from '../../types';
 
 export const CategoriesPage: React.FC = () => {
+  const { categories, isLoadingCategories } = useApp();
+
   return (
     <div className="main-content" style={{ padding: '32px 0' }}>
       <div className="app-container">
@@ -15,54 +18,245 @@ export const CategoriesPage: React.FC = () => {
           </p>
         </div>
 
-        <div className="grid grid-cols-3 gap-lg">
-          {mockCategories.map((cat) => (
-            <Link
-              key={cat.id}
-              to={`/category/${cat.slug}`}
-              className="card card-interactive"
-              style={{ padding: '24px', textDecoration: 'none' }}
-            >
-              <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>{cat.icon}</div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text-main)', marginBottom: '6px' }}>
-                {cat.name}
-              </h2>
-              <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: '16px' }}>
-                {cat.subcategories}
-              </p>
-              <span className="btn btn-secondary btn-sm btn-full" style={{ color: 'var(--color-primary)' }}>
-                View All {cat.itemCount} Items →
-              </span>
-            </Link>
-          ))}
-        </div>
+        {isLoadingCategories && categories.length === 0 ? (
+          <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+            <Loader2 size={36} className="animate-spin" style={{ margin: '0 auto 16px' }} />
+            <p style={{ fontSize: '1rem' }}>Loading live categories from backend...</p>
+          </div>
+        ) : categories.length === 0 ? (
+          <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+            <PackageOpen size={48} style={{ margin: '0 auto 12px', opacity: 0.6 }} />
+            <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-main)' }}>No Categories Available</h3>
+            <p style={{ marginTop: '6px' }}>No construction material categories were returned by the backend.</p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-3 gap-lg">
+            {categories.map((cat) => (
+              <Link
+                key={cat.id || cat.slug}
+                to={`/category/${cat.slug}`}
+                className="card card-interactive"
+                style={{ padding: '24px', textDecoration: 'none' }}
+              >
+                <div style={{ fontSize: '2.5rem', marginBottom: '12px' }}>{cat.icon}</div>
+                <h2 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-text-main)', marginBottom: '6px' }}>
+                  {cat.name}
+                </h2>
+                <p style={{ fontSize: '0.8125rem', color: 'var(--color-text-muted)', lineHeight: 1.5, marginBottom: '16px' }}>
+                  {cat.subcategories}
+                </p>
+                <span className="btn btn-secondary btn-sm btn-full" style={{ color: 'var(--color-primary)' }}>
+                  {cat.itemCount > 0 ? `View All ${cat.itemCount} Items →` : 'View Materials →'}
+                </span>
+              </Link>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
 };
 
+const matchesCategory = (prodCategory: string, prodName: string, targetSlug: string): boolean => {
+  const target = (targetSlug || '').toLowerCase();
+  const cat = (prodCategory || '').toLowerCase();
+  const name = (prodName || '').toLowerCase();
+
+  // Direct match or normalized substring
+  if (cat.includes(target) || target.includes(cat) || name.includes(target)) {
+    return true;
+  }
+
+  // Broad category alias matching:
+  if (target.includes('plumb') || target.includes('pipe') || target.includes('tank') || target.includes('sanitary') || target.includes('faucet')) {
+    return (
+      cat.includes('pipe') ||
+      cat.includes('tank') ||
+      cat.includes('plumb') ||
+      cat.includes('sanitary') ||
+      cat.includes('faucet') ||
+      cat.includes('tap') ||
+      name.includes('pipe') ||
+      name.includes('tank') ||
+      name.includes('tap') ||
+      name.includes('faucet') ||
+      name.includes('basin') ||
+      name.includes('astral') ||
+      name.includes('supreme') ||
+      name.includes('sintex')
+    );
+  }
+
+  if (target.includes('struct') || target.includes('cement') || target.includes('steel') || target.includes('rebar') || target.includes('sand') || target.includes('brick') || target.includes('aggregate')) {
+    return (
+      cat.includes('cement') ||
+      cat.includes('steel') ||
+      cat.includes('tmt') ||
+      cat.includes('sand') ||
+      cat.includes('brick') ||
+      cat.includes('block') ||
+      cat.includes('aggregate') ||
+      name.includes('cement') ||
+      name.includes('tiscon') ||
+      name.includes('rebar') ||
+      name.includes('sand') ||
+      name.includes('brick') ||
+      name.includes('ultratech') ||
+      name.includes('acc')
+    );
+  }
+
+  if (target.includes('elect') || target.includes('wire') || target.includes('switch') || target.includes('mcb') || target.includes('light')) {
+    return (
+      cat.includes('wire') ||
+      cat.includes('cable') ||
+      cat.includes('switch') ||
+      cat.includes('mcb') ||
+      cat.includes('distribut') ||
+      cat.includes('light') ||
+      cat.includes('elect') ||
+      name.includes('wire') ||
+      name.includes('switch') ||
+      name.includes('mcb') ||
+      name.includes('cable') ||
+      name.includes('havells') ||
+      name.includes('polycab')
+    );
+  }
+
+  if (target.includes('finish') || target.includes('paint') || target.includes('putty') || target.includes('waterproof') || target.includes('coat')) {
+    return (
+      cat.includes('paint') ||
+      cat.includes('putty') ||
+      cat.includes('primer') ||
+      cat.includes('waterproof') ||
+      cat.includes('sealant') ||
+      cat.includes('coat') ||
+      name.includes('paint') ||
+      name.includes('putty') ||
+      name.includes('fixit') ||
+      name.includes('primer') ||
+      name.includes('emulsion') ||
+      name.includes('asian') ||
+      name.includes('berger')
+    );
+  }
+
+  if (target.includes('hardw') || target.includes('tool') || target.includes('safety') || target.includes('drill')) {
+    return (
+      cat.includes('tool') ||
+      cat.includes('drill') ||
+      cat.includes('safety') ||
+      cat.includes('fastener') ||
+      name.includes('drill') ||
+      name.includes('cutter') ||
+      name.includes('grinder') ||
+      name.includes('helmet') ||
+      name.includes('tool') ||
+      name.includes('bosch')
+    );
+  }
+
+  if (target.includes('plywood') || target.includes('wood') || target.includes('timber') || target.includes('marine')) {
+    return cat.includes('plywood') || cat.includes('wood') || cat.includes('timber') || cat.includes('marine') || name.includes('plywood');
+  }
+
+  if (target.includes('tile') || target.includes('floor') || target.includes('marble')) {
+    return cat.includes('tile') || cat.includes('floor') || cat.includes('marble') || name.includes('tile');
+  }
+
+  return false;
+};
+
+const getCategoryMetadata = (slug: string, foundCategory?: CategoryItem | null): CategoryItem => {
+  if (foundCategory) return foundCategory;
+  const s = (slug || '').toLowerCase();
+  if (s.includes('plumb') || s.includes('pipe') || s.includes('tank') || s.includes('sanitary')) {
+    return {
+      id: slug,
+      name: 'Plumbing, Pipes & Sanitaryware',
+      slug,
+      subcategories: 'CPVC Pipes, Overhead Water Tanks, Faucets & Bathroom Fittings',
+      icon: '🚰',
+      itemCount: 0,
+    };
+  }
+  if (s.includes('struct') || s.includes('cement') || s.includes('steel') || s.includes('rebar') || s.includes('sand') || s.includes('brick')) {
+    return {
+      id: slug,
+      name: 'Structural & Masonry Materials',
+      slug,
+      subcategories: 'UltraTech Cement, Tata Tiscon TMT Rebars, M-Sand, Red Clay Bricks, AAC Blocks',
+      icon: '🏗️',
+      itemCount: 0,
+    };
+  }
+  if (s.includes('elect') || s.includes('wire') || s.includes('switch') || s.includes('mcb')) {
+    return {
+      id: slug,
+      name: 'Electrical Supplies & Switchgear',
+      slug,
+      subcategories: 'Havells/Polycab Copper Wires, Modular Switches, MCB Distribution Boards',
+      icon: '⚡',
+      itemCount: 0,
+    };
+  }
+  if (s.includes('finish') || s.includes('paint') || s.includes('putty') || s.includes('waterproof')) {
+    return {
+      id: slug,
+      name: 'Paints, Putty & Waterproofing',
+      slug,
+      subcategories: 'Asian Paints Apex/Royale, Dr. Fixit Waterproofing, Birla White Putty',
+      icon: '🎨',
+      itemCount: 0,
+    };
+  }
+  if (s.includes('hardw') || s.includes('tool') || s.includes('safety')) {
+    return {
+      id: slug,
+      name: 'Power Tools & Site Safety Equipment',
+      slug,
+      subcategories: 'Bosch Hammer Drills, Angle Grinders, Industrial Helmets & Safety Gear',
+      icon: '🔧',
+      itemCount: 0,
+    };
+  }
+  return {
+    id: slug,
+    name: slug.replace(/-/g, ' ').toUpperCase(),
+    slug,
+    subcategories: 'Verified Industrial Building Supplies',
+    icon: '🏗️',
+    itemCount: 0,
+  };
+};
+
 export const CategoryProductsPage: React.FC = () => {
   const { slug } = useParams<{ slug: string }>();
-  const { products, offers, retailers, addToCart } = useApp();
-
-  const currentCategory = mockCategories.find((c) => c.slug === slug) || mockCategories[0];
+  const { categories, products, offers, retailers, addToCart, isLoadingProducts } = useApp();
 
   // Filters
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [priceSort, setPriceSort] = useState<'asc' | 'desc' | 'default'>('default');
 
+  const foundCategory = categories.find(
+    (c) =>
+      c.slug === slug ||
+      (c.id && c.id === slug) ||
+      (c.name && c.name.toLowerCase().replace(/\s+/g, '-') === slug?.toLowerCase())
+  );
+
+  const currentCategory: CategoryItem = getCategoryMetadata(slug || '', foundCategory);
+
+  // Filter products matching category
   const categoryProducts = products.filter((p) => {
-    if (slug === 'structural') return p.category === 'Structural Materials';
-    if (slug === 'electrical') return p.category === 'Electrical Supplies';
-    if (slug === 'plumbing') return p.category === 'Plumbing & Sanitary';
-    if (slug === 'finishing') return p.category === 'Paints & Finishing';
-    if (slug === 'hardware') return p.category === 'Power Tools & Hardware';
-    return true;
+    if (!slug) return true;
+    return matchesCategory(p.category, p.name, slug);
   });
 
-  const availableBrands = Array.from(new Set(categoryProducts.map((p) => p.brand)));
+  const availableBrands = Array.from(new Set(categoryProducts.map((p) => p.brand).filter(Boolean)));
 
-  let filtered = categoryProducts.filter((p) => (selectedBrand === 'all' ? true : p.brand === selectedBrand));
+  const filtered = categoryProducts.filter((p) => (selectedBrand === 'all' ? true : p.brand === selectedBrand));
 
   if (priceSort === 'asc') {
     filtered.sort((a, b) => {
@@ -154,86 +348,119 @@ export const CategoryProductsPage: React.FC = () => {
 
           {/* Products Grid */}
           <main>
-            <div className="grid grid-cols-3 gap-md">
-              {filtered.map((prod) => {
-                const bestOffer = offers.find((o) => o.productId === prod.id) || offers[0];
-                const store = retailers.find((r) => r.id === bestOffer.retailerId) || retailers[0];
+            {isLoadingProducts && products.length === 0 ? (
+              <div style={{ padding: '60px 0', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                <Loader2 size={36} className="animate-spin" style={{ margin: '0 auto 16px' }} />
+                <p>Loading {currentCategory.name} materials...</p>
+              </div>
+            ) : filtered.length === 0 ? (
+              <div className="card" style={{ padding: '40px', textAlign: 'center', color: 'var(--color-text-muted)' }}>
+                <PackageOpen size={48} style={{ margin: '0 auto 12px', opacity: 0.6 }} />
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, color: 'var(--color-text-main)' }}>No Products Found</h3>
+                <p style={{ marginTop: '6px' }}>No materials currently listed under {currentCategory.name}.</p>
+                <Link to="/categories" className="btn btn-secondary btn-sm" style={{ marginTop: '16px', display: 'inline-flex' }}>
+                  Browse Other Categories
+                </Link>
+              </div>
+            ) : (
+              <div className="grid grid-cols-3 gap-md">
+                {filtered.map((prod) => {
+                  const prodOffer = offers.find((o) => o.productId === prod.id);
+                  const bestOffer = prodOffer || {
+                    id: `off-${prod.id}`,
+                    productId: prod.id,
+                    retailerId: retailers[0]?.id || '',
+                    price: 380,
+                    stock: 50,
+                    isAvailable: true,
+                    estimatedDeliveryMins: 35,
+                  };
+                  const store: Retailer = retailers.find((r) => r.id === bestOffer.retailerId) || retailers[0] || {
+                    id: 'store_1',
+                    name: 'Verified Dealer',
+                    address: 'Hyderabad',
+                    distance: 1.5,
+                    rating: 4.8,
+                    isServiceable: true,
+                    deliveryTypes: ['express'],
+                  };
 
-                return (
-                  <div key={prod.id} className="card card-interactive" style={{ display: 'flex', flexDirection: 'column' }}>
-                    <Link to={`/product/${prod.id}`} style={{ position: 'relative', height: '170px' }}>
-                      <img
-                        src={prod.imageUrl || '/images/ultratech_cement.jpg'}
-                        alt={prod.name}
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                      <div
-                        style={{
-                          position: 'absolute',
-                          top: '10px',
-                          left: '10px',
-                          backgroundColor: '#111827',
-                          color: '#FFF',
-                          fontSize: '0.7rem',
-                          fontWeight: 700,
-                          padding: '2px 8px',
-                          borderRadius: 'var(--radius-full)',
-                        }}
-                      >
-                        {prod.brand}
-                      </div>
-                    </Link>
-
-                    <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                      <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
-                        {prod.unit}
-                      </div>
-
-                      <Link to={`/product/${prod.id}`} style={{ textDecoration: 'none' }}>
-                        <h4
+                  return (
+                    <div key={prod.id} className="card card-interactive" style={{ display: 'flex', flexDirection: 'column' }}>
+                      <Link to={`/product/${prod.id}`} style={{ position: 'relative', height: '170px' }}>
+                        <img
+                          src={prod.imageUrl || '/images/ultratech_cement.jpg'}
+                          alt={prod.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                        <div
                           style={{
-                            fontSize: '0.9375rem',
+                            position: 'absolute',
+                            top: '10px',
+                            left: '10px',
+                            backgroundColor: '#111827',
+                            color: '#FFF',
+                            fontSize: '0.7rem',
                             fontWeight: 700,
-                            lineHeight: 1.35,
-                            marginBottom: '8px',
-                            color: 'var(--color-text-main)',
-                            display: '-webkit-box',
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: 'vertical',
-                            overflow: 'hidden',
-                            height: '2.7em',
+                            padding: '2px 8px',
+                            borderRadius: 'var(--radius-full)',
                           }}
                         >
-                          {prod.name}
-                        </h4>
+                          {prod.brand}
+                        </div>
                       </Link>
 
-                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '12px' }}>
-                        <span>📍 {store.name.slice(0, 18)}...</span>
-                        <span style={{ fontWeight: 700, color: '#D97706' }}>⭐ {prod.rating || 4.8}</span>
-                      </div>
-
-                      <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--color-border-light)' }}>
-                        <div>
-                          <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--color-text-main)', fontFamily: 'Outfit' }}>
-                            ₹{bestOffer.price.toLocaleString()}
-                          </div>
+                      <div style={{ padding: '16px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                        <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)', marginBottom: '4px' }}>
+                          {prod.unit}
                         </div>
 
-                        <button
-                          onClick={() => addToCart(bestOffer, prod, store, 1)}
-                          className="btn btn-primary btn-sm"
-                          style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
-                        >
-                          <Plus size={16} />
-                          <span>Add</span>
-                        </button>
+                        <Link to={`/product/${prod.id}`} style={{ textDecoration: 'none' }}>
+                          <h4
+                            style={{
+                              fontSize: '0.9375rem',
+                              fontWeight: 700,
+                              lineHeight: 1.35,
+                              marginBottom: '8px',
+                              color: 'var(--color-text-main)',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden',
+                              height: '2.7em',
+                            }}
+                          >
+                            {prod.name}
+                          </h4>
+                        </Link>
+
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.75rem', color: 'var(--color-text-secondary)', marginBottom: '12px' }}>
+                          <span>📍 {store.name.slice(0, 18)}...</span>
+                          <span style={{ fontWeight: 700, color: '#D97706' }}>⭐ {prod.rating || 4.8}</span>
+                        </div>
+
+                        <div style={{ marginTop: 'auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: '10px', borderTop: '1px solid var(--color-border-light)' }}>
+                          <div>
+                            <div style={{ fontSize: '1.25rem', fontWeight: 900, color: 'var(--color-text-main)', fontFamily: 'Outfit' }}>
+                              ₹{bestOffer.price.toLocaleString()}
+                            </div>
+                          </div>
+
+                          <button
+                            onClick={() => addToCart(bestOffer, prod, store, 1)}
+                            className="btn btn-primary btn-sm"
+                            style={{ display: 'flex', alignItems: 'center', gap: '4px' }}
+                          >
+                            <Plus size={16} />
+                            <span>Add</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                );
-              })}
-            </div>
+                  );
+                })}
+              </div>
+            )}
           </main>
         </div>
       </div>

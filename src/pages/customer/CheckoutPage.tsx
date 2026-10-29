@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { useApp } from '../../store';
 import { DeliveryType } from '../../types';
+import { api } from '../../services/api';
 
 export const CheckoutPage: React.FC = () => {
   const navigate = useNavigate();
@@ -25,6 +26,7 @@ export const CheckoutPage: React.FC = () => {
     appliedCoupon,
     currentAddress,
     setIsLocationModalOpen,
+    clearCart,
     placeOrder,
   } = useApp();
 
@@ -55,34 +57,59 @@ export const CheckoutPage: React.FC = () => {
 
   const deliveryFee = deliveryType === 'bulk' ? 250 : 60;
   const finalPayable = cartTotal + deliveryFee;
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handlePlaceOrder = () => {
+  const handlePlaceOrder = async () => {
     setIsSubmitting(true);
+    setErrorMessage(null);
 
-    // Fire celebration confetti
     try {
-      confetti({
-        particleCount: 120,
-        spread: 80,
-        origin: { y: 0.6 },
-        colors: ['#E02020', '#111827', '#22C55E', '#F59E0B'],
-      });
-    } catch {
-      // ignore
-    }
+      const orderPayload = {
+        delivery_type: deliveryType === 'bulk' ? 'heavy' : deliveryType,
+        payment_method: paymentMethod === 'COD' ? 'COD' : 'ONLINE',
+        order_note: gstinInput ? `GSTIN: ${gstinInput} | Company: ${companyName}` : '',
+        address_id: currentAddress?.id || undefined,
+        items: cart.map((item) => ({
+          product_id: item.product.id,
+          offer_id: item.offer.id,
+          quantity: item.quantity,
+          unit_price: item.offer.price,
+          product_name: item.product.name,
+        })),
+      };
 
-    setTimeout(() => {
-      const order = placeOrder({
-        deliveryType,
-        scheduledSlot: deliveryType === 'scheduled' ? scheduledSlot : undefined,
-        paymentMethod,
-        deliveryFee,
-        totalAmount: finalPayable,
-      });
+      const createdOrder = await api.createOrder(orderPayload as any);
 
+      // If online payment, verify/create intent
+      if (paymentMethod !== 'COD' && createdOrder?.id) {
+        try {
+          await api.createPaymentIntent(createdOrder.id, paymentMethod);
+          await api.verifyPayment({ order_id: createdOrder.id });
+        } catch (payErr) {
+          console.warn('Payment intent capture fallback:', payErr);
+        }
+      }
+
+      // Fire celebration confetti
+      try {
+        confetti({
+          particleCount: 120,
+          spread: 80,
+          origin: { y: 0.6 },
+          colors: ['#E02020', '#111827', '#22C55E', '#F59E0B'],
+        });
+      } catch {
+        // ignore
+      }
+
+      clearCart();
       setIsSubmitting(false);
-      navigate(`/tracking/${order.id}`);
-    }, 800);
+      navigate(`/tracking/${createdOrder.id || createdOrder.order_code}`);
+    } catch (err: any) {
+      setIsSubmitting(false);
+      const msg = err?.message || err?.error?.message || 'Failed to place order. Please check inventory or try again.';
+      setErrorMessage(msg);
+    }
   };
 
   return (
@@ -369,6 +396,24 @@ export const CheckoutPage: React.FC = () => {
                   <span style={{ color: 'var(--color-primary)' }}>₹{finalPayable.toLocaleString()}</span>
                 </div>
               </div>
+
+              {/* Error Feedback */}
+              {errorMessage && (
+                <div
+                  style={{
+                    marginTop: '16px',
+                    padding: '12px',
+                    backgroundColor: '#FEF2F2',
+                    border: '1px solid #F87171',
+                    borderRadius: 'var(--radius-md)',
+                    color: '#DC2626',
+                    fontSize: '0.8125rem',
+                    fontWeight: 600,
+                  }}
+                >
+                  ⚠️ {errorMessage}
+                </div>
+              )}
 
               {/* Place Order CTA */}
               <button

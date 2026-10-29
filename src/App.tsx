@@ -7,6 +7,7 @@ import { LocationModal } from './components/common/LocationModal';
 import { MaterialCalculator } from './components/common/MaterialCalculator';
 import { CartDrawer } from './components/customer/CartDrawer';
 import { NewOrderModal } from './components/retailer/NewOrderModal';
+import { AuthModal } from './components/auth/AuthModal';
 
 // Customer Pages
 import { HomePage } from './pages/customer/HomePage';
@@ -79,6 +80,7 @@ export const App: React.FC = () => {
           <MaterialCalculator />
           <CartDrawer />
           <NewOrderModal />
+          <AuthModal />
         </div>
       </Router>
     </AppProvider>

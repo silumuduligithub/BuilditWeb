@@ -15,6 +15,8 @@ import {
   Layers,
   ArrowRightLeft,
   X,
+  User,
+  LogOut,
 } from 'lucide-react';
 import { useApp } from '../../store';
 import { UserRole } from '../../types';
@@ -25,6 +27,11 @@ export const Navbar: React.FC = () => {
   const {
     currentRole,
     setCurrentRole,
+    currentUser,
+    isAuthenticated,
+    logout,
+    setIsAuthModalOpen,
+    setAuthModalMode,
     currentAddress,
     setIsLocationModalOpen,
     setIsMaterialCalcOpen,
@@ -41,6 +48,7 @@ export const Navbar: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [isRoleMenuOpen, setIsRoleMenuOpen] = useState(false);
+  const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
 
@@ -521,6 +529,124 @@ export const Navbar: React.FC = () => {
                 Earnings
               </Link>
             </div>
+          )}
+
+          {/* User Account / Sign In Action */}
+          {isAuthenticated && currentUser ? (
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setIsUserMenuOpen((prev) => !prev)}
+                className="btn btn-secondary btn-sm"
+                style={{ display: 'flex', alignItems: 'center', gap: '6px', backgroundColor: '#F1F5F9' }}
+              >
+                <div
+                  style={{
+                    width: '22px',
+                    height: '22px',
+                    borderRadius: '50%',
+                    backgroundColor: 'var(--color-primary)',
+                    color: '#FFF',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontSize: '0.75rem',
+                    fontWeight: 800,
+                  }}
+                >
+                  {(currentUser.name || 'U').charAt(0).toUpperCase()}
+                </div>
+                <span style={{ fontWeight: 700, maxWidth: '100px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                  {currentUser.name || 'Account'}
+                </span>
+                <ChevronDown size={12} />
+              </button>
+
+              {isUserMenuOpen && (
+                <div
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: '8px',
+                    backgroundColor: '#FFFFFF',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--color-border)',
+                    boxShadow: 'var(--shadow-xl)',
+                    zIndex: 300,
+                    minWidth: '220px',
+                    padding: '8px',
+                  }}
+                >
+                  <div style={{ padding: '8px 12px', borderBottom: '1px solid var(--color-border)', marginBottom: '6px' }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.875rem' }}>{currentUser.name || 'User'}</div>
+                    <div style={{ fontSize: '0.75rem', color: 'var(--color-text-muted)' }}>{currentUser.phone || currentUser.email}</div>
+                    <div style={{ marginTop: '4px' }}>
+                      <span className="badge badge-success" style={{ fontSize: '0.65rem', textTransform: 'uppercase' }}>
+                        {currentUser.role || currentRole}
+                      </span>
+                    </div>
+                  </div>
+
+                  <Link
+                    to="/orders"
+                    onClick={() => setIsUserMenuOpen(false)}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.8125rem',
+                      color: 'var(--color-text-main)',
+                      textDecoration: 'none',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = 'var(--color-bg)')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <Package size={15} />
+                    <span>My Orders</span>
+                  </Link>
+
+                  <button
+                    onClick={() => {
+                      logout();
+                      setIsUserMenuOpen(false);
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '8px',
+                      width: '100%',
+                      padding: '8px 12px',
+                      borderRadius: 'var(--radius-sm)',
+                      fontSize: '0.8125rem',
+                      color: 'var(--color-error)',
+                      border: 'none',
+                      backgroundColor: 'transparent',
+                      cursor: 'pointer',
+                      textAlign: 'left',
+                    }}
+                    onMouseEnter={(e) => (e.currentTarget.style.backgroundColor = '#FEF2F2')}
+                    onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = 'transparent')}
+                  >
+                    <LogOut size={15} />
+                    <span>Sign Out</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <button
+              onClick={() => {
+                setAuthModalMode('otp');
+                setIsAuthModalOpen(true);
+              }}
+              className="btn btn-primary btn-sm"
+              style={{ display: 'flex', alignItems: 'center', gap: '6px' }}
+            >
+              <User size={15} />
+              <span>Sign In</span>
+            </button>
           )}
         </div>
       </div>

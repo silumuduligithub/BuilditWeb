@@ -98,6 +98,7 @@ export interface DeliveryAddress {
 
 export interface Order {
   id: string;
+  order_code?: string;
   customerId: string;
   customerName?: string;
   customerPhone?: string;

@@ -1,15 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ShieldCheck, Store, Users, Truck, DollarSign, Check, X, AlertCircle } from 'lucide-react';
 import { useApp } from '../../store';
 
 export const AdminDashboard: React.FC = () => {
   const { retailers, orders, products, showToast } = useApp();
 
-  const totalGMV = orders.reduce((sum, o) => sum + o.totalAmount, 0) * 12; // annualized/aggregate platform mock
+  const totalGMV = orders.reduce((sum, o) => sum + (o.totalAmount || 0), 0);
   const totalStores = retailers.length;
   const activeOrdersCount = orders.filter((o) => o.status !== 'delivered').length;
 
   const [storesList, setStoresList] = useState(retailers);
+
+  useEffect(() => {
+    setStoresList(retailers);
+  }, [retailers]);
 
   const handleVerifyStore = (storeId: string) => {
     setStoresList((prev) =>
